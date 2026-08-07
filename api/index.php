@@ -1,193 +1,48 @@
 <?php
-// ==========================================
-// Supabase REST API Configuration
-// ==========================================
-define('SUPABASE_URL', 'https://YOUR_SUPABASE_PROJECT_ID.supabase.co');
-define('SUPABASE_KEY', 'YOUR_SUPABASE_ANON_KEY');
 
-/**
- * Inserts a log entry into Supabase via REST API
- */
-function log_to_supabase($cipher, $mode, $input, $output) {
-    $url = SUPABASE_URL . '/rest/v1/cipher_logs';
-    
-    $payload = json_encode([
-        'cipher_type' => $cipher,
-        'action_mode' => $mode,
-        'input_text' => $input,
-        'output_text' => $output
-    ]);
+declare(strict_types=1);
 
-    $ch = curl_init($url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Content-Type: application/json',
-        'apikey: ' . SUPABASE_KEY,
-        'Authorization: Bearer ' . SUPABASE_KEY,
-        'Prefer: return=minimal'
-    ]);
+require_once __DIR__ . '/../src/ciphers.php';
+require_once __DIR__ . '/../src/supabase.php';
 
-    $response = curl_exec($ch);
-    curl_close($ch);
-    return $response;
-}
-
-// ==========================================
-// Cipher Helpers
-// ==========================================
-
-// 1. ROT13
-function process_rot13($text) {
-    return str_rot13($text);
-}
-
-// 2. Caesar Cipher
-function process_caesar($text, $shift = 3, $decrypt = false) {
-    $shift = $decrypt ? (26 - ($shift % 26)) : ($shift % 26);
-    $output = '';
-    foreach (str_split($text) as $char) {
-        if (ctype_upper($char)) {
-            $output .= chr((ord($char) - 65 + $shift) % 26 + 65);
-        } elseif (ctype_lower($char)) {
-            $output .= chr((ord($char) - 97 + $shift) % 26 + 97);
-        } else {
-            $output .= $char;
-        }
-    }
-    return $output;
-}
-
-// 3. Atbash Cipher
-function process_atbash($text) {
-    $output = '';
-    foreach (str_split($text) as $char) {
-        if (ctype_upper($char)) {
-            $output .= chr(ord('Z') - (ord($char) - ord('A')));
-        } elseif (ctype_lower($char)) {
-            $output .= chr(ord('z') - (ord($char) - ord('a')));
-        } else {
-            $output .= $char;
-        }
-    }
-    return $output;
-}
-
-// 4. Symmetric Cipher (AES-128-CBC)
-function process_symmetric($text, $key = 'crypticpixelkey', $decrypt = false) {
-    $method = "AES-128-CBC";
-    $iv = substr(hash('sha256', 'cryptic_iv_seed'), 0, 16);
-    $hashed_key = substr(hash('sha256', $key), 0, 16);
-
-    if (!$decrypt) {
-        return base64_encode(openssl_encrypt($text, $method, $hashed_key, 0, $iv));
-    } else {
-        return openssl_decrypt(base64_decode($text), $method, $hashed_key, 0, $iv) ?: "[DECRYPTION FAILED]";
-    }
-}
-
-// 5. Asymmetric Cipher (RSA Key Simulation / OpenSSL)
-function process_asymmetric($text, $decrypt = false) {
-    $config = array(
-        "digest_alg" => "sha512",
-        "private_key_bits" => 1024,
-        "private_key_type" => OPENSSL_KEYTYPE_RSA,
-    );
-    
-    $res = openssl_pkey_new($config);
-    if (!$res) return $decrypt ? "[INVALID RSA PAYLOAD]" : base64_encode($text);
-    
-    openssl_pkey_export($res, $privKey);
-    $pubKey = openssl_pkey_get_details($res)["key"];
-
-    if (!$decrypt) {
-        openssl_public_encrypt($text, $encrypted, $pubKey);
-        return base64_encode($encrypted);
-    } else {
-        $data = base64_decode($text);
-        openssl_private_decrypt($data, $decrypted, $privKey);
-        return $decrypted ?: "[RSA DECRYPT FAILED]";
-    }
-}
-
-// 6. Base64
-function process_base64($text, $decrypt = false) {
-    return $decrypt ? base64_decode($text) : base64_encode($text);
-}
-
-// 7. Morse Code
-function process_morse($text, $decrypt = false) {
-    $morse_map = [
-        'A' => '.-',    'B' => '-...',  'C' => '-.-.',  'D' => '-..',   'E' => '.',
-        'F' => '..-.',  'G' => '--.',   'H' => '....',  'I' => '..',    'J' => '.---',
-        'K' => '-.-',   'L' => '.-..',  'M' => '--',    'N' => '-.',    'O' => '---',
-        'P' => '.--.',  'Q' => '--.-',  'R' => '.-.',   'S' => '...',   'T' => '-',
-        'U' => '..-',   'V' => '...-',  'W' => '.--',   'X' => '-..-',  'Y' => '-.--',
-        'Z' => '--..',  '1' => '.----', '2' => '..---', '3' => '...--', '4' => '....-',
-        '5' => '.....', '6' => '-....', '7' => '--...', '8' => '---..', '9' => '----.',
-        '0' => '-----', ' ' => '/'
-    ];
-
-    if (!$decrypt) {
-        $text = strtoupper($text);
-        $result = [];
-        foreach (str_split($text) as $char) {
-            $result[] = $morse_map[$char] ?? $char;
-        }
-        return implode(' ', $result);
-    } else {
-        $reverse_map = array_flip($morse_map);
-        $tokens = explode(' ', $text);
-        $result = '';
-        foreach ($tokens as $token) {
-            $result .= $reverse_map[$token] ?? $token;
-        }
-        return $result;
-    }
-}
-
-// ==========================================
-// Form Processing Logic
-// ==========================================
 $cipher = $_POST['cipher'] ?? 'rot13';
-$encrypt_input = $_POST['encrypt_input'] ?? '';
-$decrypt_input = $_POST['decrypt_input'] ?? '';
+$encryptInput = $_POST['encrypt_input'] ?? '';
+$decryptInput = $_POST['decrypt_input'] ?? '';
 
-$encrypt_result = '';
-$decrypt_result = '';
+$encryptResult = '';
+$decryptResult = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Process Encryption Block
-    if (!empty($encrypt_input)) {
-        switch ($cipher) {
-            case 'rot13': $encrypt_result = process_rot13($encrypt_input); break;
-            case 'caesar': $encrypt_result = process_caesar($encrypt_input, 3, false); break;
-            case 'atbash': $encrypt_result = process_atbash($encrypt_input); break;
-            case 'symmetric': $encrypt_result = process_symmetric($encrypt_input, 'crypticpixelkey', false); break;
-            case 'asymmetric': $encrypt_result = process_asymmetric($encrypt_input, false); break;
-            case 'base64': $encrypt_result = process_base64($encrypt_input, false); break;
-            case 'morse': $encrypt_result = process_morse($encrypt_input, false); break;
-        }
+    if ($encryptInput !== '') {
+        $encryptResult = match ($cipher) {
+            'rot13'      => process_rot13($encryptInput),
+            'caesar'     => process_caesar($encryptInput, 3, false),
+            'atbash'     => process_atbash($encryptInput),
+            'symmetric'  => process_symmetric($encryptInput, 'crypticpixelkey', false),
+            'asymmetric' => process_asymmetric($encryptInput, false),
+            'base64'     => process_base64($encryptInput, false),
+            'morse'      => process_morse($encryptInput, false),
+            default      => ''
+        };
 
-        // Send Log to Supabase
-        log_to_supabase($cipher, 'encrypt', $encrypt_input, $encrypt_result);
+        log_to_supabase($cipher, 'encrypt', $encryptInput, $encryptResult);
     }
 
     // Process Decryption Block
-    if (!empty($decrypt_input)) {
-        switch ($cipher) {
-            case 'rot13': $decrypt_result = process_rot13($decrypt_input); break;
-            case 'caesar': $decrypt_result = process_caesar($decrypt_input, 3, true); break;
-            case 'atbash': $decrypt_result = process_atbash($decrypt_input); break;
-            case 'symmetric': $decrypt_result = process_symmetric($decrypt_input, 'crypticpixelkey', true); break;
-            case 'asymmetric': $decrypt_result = process_asymmetric($decrypt_input, true); break;
-            case 'base64': $decrypt_result = process_base64($decrypt_input, true); break;
-            case 'morse': $decrypt_result = process_morse($decrypt_input, true); break;
-        }
+    if ($decryptInput !== '') {
+        $decryptResult = match ($cipher) {
+            'rot13'      => process_rot13($decryptInput),
+            'caesar'     => process_caesar($decryptInput, 3, true),
+            'atbash'     => process_atbash($decryptInput),
+            'symmetric'  => process_symmetric($decryptInput, 'crypticpixelkey', true),
+            'asymmetric' => process_asymmetric($decryptInput, true),
+            'base64'     => process_base64($decryptInput, true),
+            'morse'      => process_morse($decryptInput, true),
+            default      => ''
+        };
 
-        // Send Log to Supabase
-        log_to_supabase($cipher, 'decrypt', $decrypt_input, $decrypt_result);
+        log_to_supabase($cipher, 'decrypt', $decryptInput, $decryptResult);
     }
 }
 ?>
@@ -200,12 +55,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./css/index.css" type="text/css">
+    <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 
 <div class="container">
-    <form method="POST" action="index.php">
+    <form method="POST" action="/api/index.php">
         
         <header>
             <h1>CRYPTIC Encrypt Decrypt</h1>
@@ -215,36 +70,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="cipher-selector">
             <label for="cipher">SELECT CIPHER ALGORITHM:</label>
             <select name="cipher" id="cipher">
-                <option value="rot13" <?php if($cipher==='rot13') echo 'selected'; ?>>ROT13</option>
-                <option value="caesar" <?php if($cipher==='caesar') echo 'selected'; ?>>Caesar Cipher (Shift 3)</option>
-                <option value="atbash" <?php if($cipher==='atbash') echo 'selected'; ?>>Atbash Cipher</option>
-                <option value="symmetric" <?php if($cipher==='symmetric') echo 'selected'; ?>>Symmetric Cipher (AES-128-CBC)</option>
-                <option value="asymmetric" <?php if($cipher==='asymmetric') echo 'selected'; ?>>Asymmetric Cipher (RSA 1024)</option>
-                <option value="base64" <?php if($cipher==='base64') echo 'selected'; ?>>Base64</option>
-                <option value="morse" <?php if($cipher==='morse') echo 'selected'; ?>>Morse Code</option>
+                <option value="rot13" <?= $cipher === 'rot13' ? 'selected' : '' ?>>ROT13</option>
+                <option value="caesar" <?= $cipher === 'caesar' ? 'selected' : '' ?>>Caesar Cipher (Shift 3)</option>
+                <option value="atbash" <?= $cipher === 'atbash' ? 'selected' : '' ?>>Atbash Cipher</option>
+                <option value="symmetric" <?= $cipher === 'symmetric' ? 'selected' : '' ?>>Symmetric Cipher (AES-128-CBC)</option>
+                <option value="asymmetric" <?= $cipher === 'asymmetric' ? 'selected' : '' ?>>Asymmetric Cipher (RSA 1024)</option>
+                <option value="base64" <?= $cipher === 'base64' ? 'selected' : '' ?>>Base64</option>
+                <option value="morse" <?= $cipher === 'morse' ? 'selected' : '' ?>>Morse Code</option>
             </select>
         </div>
 
         <div class="grid-container">
-            
             <div class="grid-box encrypt-box">
                 <h2>[ ENCRYPT GRID ]</h2>
-                <label style="font-size: 0.55rem; color: #00e676;">INPUT PLAIN TEXT:</label>
-                <textarea name="encrypt_input" placeholder="Type plain text to encrypt..."><?php echo htmlspecialchars($encrypt_input); ?></textarea>
+                <label class="label-encrypt">INPUT PLAIN TEXT:</label>
+                <textarea name="encrypt_input" placeholder="Type plain text to encrypt..."><?= htmlspecialchars($encryptInput) ?></textarea>
                 
-                <label style="font-size: 0.55rem; color: #00e676;">ENCRYPTED RESULT:</label>
-                <div class="result-box"><?php echo htmlspecialchars($encrypt_result ?: '> Waiting for input...'); ?></div>
+                <label class="label-encrypt">ENCRYPTED RESULT:</label>
+                <div class="result-box"><?= htmlspecialchars($encryptResult !== '' ? $encryptResult : '> Waiting for input...') ?></div>
             </div>
 
             <div class="grid-box decrypt-box">
                 <h2>[ DECRYPT GRID ]</h2>
-                <label style="font-size: 0.55rem; color: #ff7b00;">INPUT CIPHER TEXT:</label>
-                <textarea name="decrypt_input" placeholder="Type cipher text to decrypt..."><?php echo htmlspecialchars($decrypt_input); ?></textarea>
+                <label class="label-decrypt">INPUT CIPHER TEXT:</label>
+                <textarea name="decrypt_input" placeholder="Type cipher text to decrypt..."><?= htmlspecialchars($decryptInput) ?></textarea>
                 
-                <label style="font-size: 0.55rem; color: #ff7b00;">DECRYPTED RESULT:</label>
-                <div class="result-box"><?php echo htmlspecialchars($decrypt_result ?: '> Waiting for input...'); ?></div>
+                <label class="label-decrypt">DECRYPTED RESULT:</label>
+                <div class="result-box"><?= htmlspecialchars($decryptResult !== '' ? $decryptResult : '> Waiting for input...') ?></div>
             </div>
-
         </div>
 
         <div class="submit-container">
@@ -260,3 +113,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 </body>
 </html>
+
