@@ -23,7 +23,6 @@
             justify-content: space-between;
         }
 
-        /* Scanline CRT overlay */
         body::before {
             content: " ";
             display: block;
@@ -41,7 +40,6 @@
             width: 100%;
         }
 
-        /* HEADER */
         header {
             background: #1b1e2e;
             border: 6px solid #000000;
@@ -65,7 +63,6 @@
             margin: 0;
         }
 
-        /* TOP OPTION DROPDOWN */
         .cipher-selector {
             background: #1b1e2e;
             border: 6px solid #000000;
@@ -99,7 +96,6 @@
             color: #ff0055;
         }
 
-        /* MIDDLE 2-GRID LAYOUT */
         .grid-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -173,7 +169,6 @@
             line-height: 1.5;
         }
 
-        /* BOTTOM SUBMIT BUTTON */
         .submit-container {
             margin-bottom: 24px;
         }
@@ -188,7 +183,6 @@
             cursor: pointer;
             box-shadow: 6px 6px 0 #000000;
             text-transform: uppercase;
-            transition: none;
         }
 
         .pixel-btn:hover {
@@ -202,7 +196,6 @@
             box-shadow: 2px 2px 0 #000000;
         }
 
-        /* FOOTER */
         footer {
             background: #1b1e2e;
             border: 6px solid #000000;

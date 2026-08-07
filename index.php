@@ -1,16 +1,38 @@
 <?php
 // ==========================================
-// PostgreSQL Database Connection
+// Supabase REST API Configuration
 // ==========================================
-$db_host = 'localhost';
-$db_port = '5432';
-$db_user = 'postgres'; // Set your PostgreSQL user
-$db_pass = 'secret';   // Set your PostgreSQL password
-$db_name = 'cryptic_db';
+define('SUPABASE_URL', 'https://YOUR_SUPABASE_PROJECT_ID.supabase.co');
+define('SUPABASE_KEY', 'YOUR_SUPABASE_ANON_KEY');
 
-$conn_string = "host={$db_host} port={$db_port} dbname={$db_name} user={$db_user} password={$db_pass}";
-$conn = @pg_connect($conn_string);
-$db_connected = (bool)$conn;
+/**
+ * Inserts a log entry into Supabase via REST API
+ */
+function log_to_supabase($cipher, $mode, $input, $output) {
+    $url = SUPABASE_URL . '/rest/v1/cipher_logs';
+    
+    $payload = json_encode([
+        'cipher_type' => $cipher,
+        'action_mode' => $mode,
+        'input_text' => $input,
+        'output_text' => $output
+    ]);
+
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Content-Type: application/json',
+        'apikey: ' . SUPABASE_KEY,
+        'Authorization: Bearer ' . SUPABASE_KEY,
+        'Prefer: return=minimal'
+    ]);
+
+    $response = curl_exec($ch);
+    curl_close($ch);
+    return $response;
+}
 
 // ==========================================
 // Cipher Helpers
@@ -126,7 +148,7 @@ function process_morse($text, $decrypt = false) {
 }
 
 // ==========================================
-// Form Processing & Database Insertion
+// Form Processing Logic
 // ==========================================
 $cipher = $_POST['cipher'] ?? 'rot13';
 $encrypt_input = $_POST['encrypt_input'] ?? '';
@@ -148,11 +170,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             case 'morse': $encrypt_result = process_morse($encrypt_input, false); break;
         }
 
-        // Log to PostgreSQL
-        if ($db_connected) {
-            $query = "INSERT INTO cipher_logs (cipher_type, action_mode, input_text, output_text) VALUES ($1, 'encrypt', $2, $3)";
-            pg_query_params($conn, $query, array($cipher, $encrypt_input, $encrypt_result));
-        }
+        // Send Log to Supabase
+        log_to_supabase($cipher, 'encrypt', $encrypt_input, $encrypt_result);
     }
 
     // Process Decryption Block
@@ -167,11 +186,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             case 'morse': $decrypt_result = process_morse($decrypt_input, true); break;
         }
 
-        // Log to PostgreSQL
-        if ($db_connected) {
-            $query = "INSERT INTO cipher_logs (cipher_type, action_mode, input_text, output_text) VALUES ($1, 'decrypt', $2, $3)";
-            pg_query_params($conn, $query, array($cipher, $decrypt_input, $decrypt_result));
-        }
+        // Send Log to Supabase
+        log_to_supabase($cipher, 'decrypt', $decrypt_input, $decrypt_result);
     }
 }
 ?>
@@ -185,218 +201,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     
-    <style>
-        * {
-            box-sizing: border-box;
-            font-family: 'Press Start 2P', monospace;
-            image-rendering: pixelated;
-            image-rendering: crisp-edges;
-        }
 
-        body {
-            margin: 0;
-            padding: 20px;
-            background-color: #0d0e15;
-            background-image: 
-                linear-gradient(45deg, #151828 25%, transparent 25%), 
-                linear-gradient(-45deg, #151828 25%, transparent 25%), 
-                linear-gradient(45deg, transparent 75%, #151828 75%), 
-                linear-gradient(-45deg, transparent 75%, #151828 75%);
-            background-size: 16px 16px;
-            color: #00ffcc;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-
-        body::before {
-            content: " ";
-            display: block;
-            position: fixed;
-            top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.35) 50%);
-            background-size: 100% 4px;
-            z-index: 99;
-            pointer-events: none;
-        }
-
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            width: 100%;
-        }
-
-        header {
-            background: #1b1e2e;
-            border: 6px solid #000000;
-            box-shadow: 6px 6px 0 #00ffcc;
-            padding: 20px;
-            text-align: center;
-            margin-bottom: 24px;
-        }
-
-        header h1 {
-            color: #ff0055;
-            font-size: 1.2rem;
-            margin: 0 0 10px 0;
-            text-shadow: 3px 3px 0 #000;
-            line-height: 1.4;
-        }
-
-        header p {
-            color: #ffcc00;
-            font-size: 0.6rem;
-            margin: 0;
-        }
-
-        .cipher-selector {
-            background: #1b1e2e;
-            border: 6px solid #000000;
-            box-shadow: 6px 6px 0 #ff0055;
-            padding: 16px;
-            margin-bottom: 24px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .cipher-selector label {
-            font-size: 0.65rem;
-            color: #ffcc00;
-        }
-
-        select {
-            width: 100%;
-            background: #0d0e15;
-            color: #00ffcc;
-            border: 4px solid #000;
-            padding: 12px;
-            font-size: 0.75rem;
-            outline: none;
-            cursor: pointer;
-            box-shadow: inset 3px 3px 0 #000;
-        }
-
-        select:focus {
-            background: #151828;
-            color: #ff0055;
-        }
-
-        .grid-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 24px;
-        }
-
-        @media (max-width: 768px) {
-            .grid-container {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .grid-box {
-            background: #1b1e2e;
-            border: 6px solid #000000;
-            box-shadow: 6px 6px 0 #000000;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .grid-box.encrypt-box {
-            border-color: #000;
-            box-shadow: 6px 6px 0 #00e676;
-        }
-
-        .grid-box.decrypt-box {
-            border-color: #000;
-            box-shadow: 6px 6px 0 #ff7b00;
-        }
-
-        .grid-box h2 {
-            font-size: 0.8rem;
-            margin: 0;
-            padding: 8px;
-            background: #000;
-            text-align: center;
-        }
-
-        .encrypt-box h2 { color: #00e676; }
-        .decrypt-box h2 { color: #ff7b00; }
-
-        textarea {
-            width: 100%;
-            height: 120px;
-            background: #0d0e15;
-            border: 4px solid #000;
-            color: #ffffff;
-            padding: 10px;
-            font-size: 0.65rem;
-            line-height: 1.6;
-            resize: vertical;
-            outline: none;
-            box-shadow: inset 3px 3px 0 #000;
-        }
-
-        textarea:focus {
-            border-color: #ffcc00;
-        }
-
-        .result-box {
-            background: #0d0e15;
-            border: 4px solid #000;
-            padding: 10px;
-            min-height: 80px;
-            font-size: 0.65rem;
-            color: #ffcc00;
-            word-break: break-all;
-            line-height: 1.5;
-        }
-
-        .submit-container {
-            margin-bottom: 24px;
-        }
-
-        .pixel-btn {
-            width: 100%;
-            background: #ff0055;
-            color: #ffffff;
-            border: 6px solid #000000;
-            padding: 16px;
-            font-size: 0.85rem;
-            cursor: pointer;
-            box-shadow: 6px 6px 0 #000000;
-            text-transform: uppercase;
-        }
-
-        .pixel-btn:hover {
-            background: #00e676;
-            color: #000000;
-            box-shadow: 6px 6px 0 #00ffcc;
-        }
-
-        .pixel-btn:active {
-            transform: translate(4px, 4px);
-            box-shadow: 2px 2px 0 #000000;
-        }
-
-        footer {
-            background: #1b1e2e;
-            border: 6px solid #000000;
-            box-shadow: 6px 6px 0 #000000;
-            padding: 14px;
-            text-align: center;
-            font-size: 0.55rem;
-            color: #ffffff;
-        }
-
-        footer span {
-            color: #ff0055;
-        }
-    </style>
 </head>
 <body>
 
@@ -405,7 +210,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         <header>
             <h1>CRYPTIC Encrypt Decrypt</h1>
-            <p>[ POSTGRESQL TERMINAL V1.0 ]</p>
+            <p>[ SUPABASE CLOUD TERMINAL V1.0 ]</p>
         </header>
 
         <div class="cipher-selector">
