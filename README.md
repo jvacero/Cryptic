@@ -1,4 +1,4 @@
-text```
+```text
 
 my-cryptic-app/
 ├── api/
