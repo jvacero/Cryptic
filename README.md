@@ -1,6 +1,6 @@
 # CRYPTIC Encryption Engine — Technical Documentation
 
-![alt text](Cryptic\assets\images\homepage.png)
+![alt text](https://github.com/jvacero/Cryptic/blob/Cryptic_Legacy/assets/images/homepage.png)
 
 ## Overview
 **CRYPTIC Encryption Engine** is a retro 8-bit CRT arcade-themed web application built with PHP, MySQL, CSS3, and JavaScript/HTML5. The system provides multi-cipher text processing (encryption and decryption) using classic substitution algorithms, encoding formats, and cryptographic schemes, alongside database transaction logging.
