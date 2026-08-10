@@ -8,33 +8,43 @@ declare(strict_types=1);
 $developers = [
     [
         "id"       => "dev_01",
-        "name"     => "DEV_ONE",
+        "name"     => "John Victor Acero",
         "role"     => "Lead Systems Architect",
-        "bio"      => "Handles core backend PHP logic, MySQL schemas, and system security operations.",
+        "bio"      => "Handles design elements, file environment, system architecture, core backend PHP logic, MySQL schemas.",
         "level"    => "LVL 99",
         "status"   => "ONLINE",
         "color_class" => "accent-cyan",
-        "avatar"   => "" // Optional image URL path
+        "avatar"   => "../Cryptic/devsphotos/1000010946.png" // Optional image URL path
     ],
     [
         "id"       => "dev_02",
-        "name"     => "PIXEL_MINT",
+        "name"     => "Richsander Orduña",
         "role"     => "UI / UX Engineer",
         "bio"      => "Crafted the retro scanline visuals, pixel borders, and responsive grid system.",
         "level"    => "LVL 85",
         "status"   => "ONLINE",
         "color_class" => "accent-green",
-        "avatar"   => ""
+        "avatar"   => "../Cryptic/devsphotos/1000010945.png"
     ],
     [
         "id"       => "dev_03",
-        "name"     => "CIPHER_CAT",
-        "role"     => "Security Analyst",
+        "name"     => "Mark Denniel Urqueza",
+        "role"     => "UI / UX Engineer, Security Analyst",
         "bio"      => "Maintains cryptography modules, user authentication handlers, and session validation.",
-        "level"    => "LVL 90",
+        "level"    => "LVL 85",
         "status"   => "AWAY",
         "color_class" => "accent-orange",
-        "avatar"   => ""
+        "avatar"   => "../Cryptic/devsphotos/1000010943.png"
+    ],
+    [
+        "id"       => "dev_04",
+        "name"     => "Andrei Mulato",
+        "role"     => "UI / UX Engineer",
+        "bio"      => "Crafted the retro scanline visuals, pixel borders, and responsive grid system.",
+        "level"    => "LVL 85",
+        "status"   => "AWAY",
+        "color_class" => "accent-orange",
+        "avatar"   => "../Cryptic/devsphotos/1000010942.png"
     ]
 ];
 
