@@ -1,15 +1,6 @@
 <?php
-// ==========================================
-// Database Connection
-// ==========================================
-$db_host = 'localhost';
-$db_user = 'root';
-$db_pass = ''; // Set your MySQL password
-$db_name = 'cryptic_db';
-
-$conn = new mysqli($db_host, $db_user, $db_pass, $db_name);
+include __DIR__ . "/config/mysqli_connect.php";
 $db_connected = !$conn->connect_error;
-
 // ==========================================
 // Cipher Helpers
 // ==========================================
@@ -248,7 +239,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <!-- FOOTER -->
 <footer>
-    TEXT CREDIT: <span>CRYPTIC ENCRYPTION ENGINE © 2026</span>
+    RECBSITM71 <span>CRYPTIC ENCRYPTION ENGINE © 2026</span> <a href="about_devs.php"><span style="color: white;text-adecoration:none">ABOUT DEVS</span></a>
 </footer>
 
 </body>
