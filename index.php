@@ -239,7 +239,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <!-- FOOTER -->
 <footer>
-    RECBSITM71 <span>CRYPTIC ENCRYPTION ENGINE © 2026</span> <a href="about_devs.php"><span style="color: white;text-adecoration:none">ABOUT DEVS</span></a>
+    RECBSITM71 <span>CRYPTIC ENCRYPTION ENGINE © 2026</span> <a href="about_devs.php"><span style="color: white; text-adecoration:none">ABOUT DEVS</span></a>
 </footer>
 
 </body>
